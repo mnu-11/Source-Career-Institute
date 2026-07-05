@@ -119,6 +119,15 @@ app.get('/app.js', (req, res) => {
 app.get('/styles.css', (req, res) => {
     res.sendFile(path.join(__dirname, 'styles.css'));
 });
+app.get('/favicon.png', (req, res) => {
+    res.sendFile(path.join(__dirname, 'favicon.png'));
+});
+app.get('/robots.txt', (req, res) => {
+    res.sendFile(path.join(__dirname, 'robots.txt'));
+});
+app.get('/sitemap.xml', (req, res) => {
+    res.sendFile(path.join(__dirname, 'sitemap.xml'));
+});
 
 // Note: file uploads now live on Cloudinary and are served directly from Cloudinary's
 // URLs (stored in course.image / lecture.url / resource.url) — no local /uploads
