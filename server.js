@@ -760,56 +760,17 @@ app.get('/api/orders', checkPermissions([], false), async (req, res) => {
     }
 });
 
-// Send Payment Verification OTP Route
-app.post('/api/payments/send-otp', async (req, res) => {
-    const { email } = req.body;
-    if (!email) {
-        return res.status(400).json({ error: "Email is required." });
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    req.app.locals[`payment_otp_${normalizedEmail}`] = {
-        code: generatedOtp,
-        expiresAt: Date.now() + 10 * 60 * 1000
-    };
-
-    try {
-        await sendOtpEmail(normalizedEmail, generatedOtp);
-        return res.json({ message: "Payment verification code sent successfully." });
-    } catch (err) {
-        console.error('Failed to send payment OTP email:', err && err.stack ? err.stack : err);
-        delete req.app.locals[`payment_otp_${normalizedEmail}`];
-        return res.status(500).json({ error: "Failed to send verification email. Please check server email configuration." });
-    }
-});
-
-// Create Order (Enrolled/Purchased)
+// Create Order (Direct Enrollment — no payment gateway)
 app.post('/api/orders', checkPermissions([], false), async (req, res) => {
     try {
-        const { courseId, email, otp } = req.body;
-        const normalizedEmail = (email || req.currentUser.email).trim().toLowerCase();
-
-        if (!otp) {
-            return res.status(400).json({ error: "Payment verification code is required." });
-        }
-        const record = req.app.locals[`payment_otp_${normalizedEmail}`];
-        if (!record || Date.now() > record.expiresAt) {
-            delete req.app.locals[`payment_otp_${normalizedEmail}`];
-            return res.status(400).json({ error: "Verification code has expired. Please request a new one." });
-        }
-        if (otp !== record.code) {
-            return res.status(400).json({ error: "Invalid payment verification code." });
-        }
-        delete req.app.locals[`payment_otp_${normalizedEmail}`];
+        const { courseId } = req.body;
 
         const course = await Course.findOne({ id: courseId });
         if (!course) {
             return res.status(404).json({ error: "Course not found." });
         }
 
-        const orderId = `pay_sim_${Math.floor(100000 + Math.random() * 900000)}`;
+        const orderId = `enroll_${Math.floor(100000 + Math.random() * 900000)}`;
         const dateStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
         const newOrder = await Order.create({
@@ -817,8 +778,8 @@ app.post('/api/orders', checkPermissions([], false), async (req, res) => {
             userEmail: req.currentUser.email,
             courseId: course.id,
             courseTitle: course.title,
-            amountPaid: course.price,
-            paymentGateway: "Razorpay 3D Secure OTP Server",
+            amountPaid: 0,
+            paymentGateway: "Free Enrollment",
             status: "SUCCESS",
             date: dateStr
         });

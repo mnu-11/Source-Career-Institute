@@ -829,7 +829,7 @@ function renderCourseCatalog() {
                     </div>
                     ${hasAccess 
                         ? `<button class="btn btn-accent learn-btn" data-id="${course.id}"><i class="fa-solid fa-play"></i> Study Now</button>`
-                        : `<button class="btn btn-primary buy-btn" data-id="${course.id}"><i class="fa-solid fa-cart-shopping"></i> Purchase</button>`
+                        : `<button class="btn btn-primary buy-btn" data-id="${course.id}"><i class="fa-solid fa-circle-plus"></i> Enroll</button>`
                     }
                 </div>
             </div>
@@ -931,14 +931,10 @@ function openCourseDetails(courseId) {
         <div class="detail-sidebar">
             <div class="sticky-card glass-panel">
                 <img src="${course.image}" alt="${course.title}">
-                <div class="pricing-info">
-                    <div class="price">₹${course.price}</div>
-                    <div class="discount">Save ${Math.round((1 - (course.price / course.originalPrice)) * 100)}% off current bundle</div>
-                </div>
 
                 ${hasAccess 
                     ? `<button class="btn btn-accent learn-sidebar-btn" style="width: 100%;"><i class="fa-solid fa-circle-play"></i> Start Studying</button>`
-                    : `<button class="btn btn-primary buy-sidebar-btn" style="width: 100%;"><i class="fa-solid fa-credit-card"></i> Enroll in Course</button>`
+                    : `<button class="btn btn-primary buy-sidebar-btn" style="width: 100%;"><i class="fa-solid fa-circle-plus"></i> Enroll in Course</button>`
                 }
 
                 <ul class="bullet-points">
@@ -981,32 +977,10 @@ function openCourseDetails(courseId) {
 }
 
 // ----------------------------------------------------
-// 8. SIMULATED RAZORPAY TRANSACTION AUTHENTICATION (3D Secure)
+// 8. DIRECT COURSE ENROLLMENT (no payment gateway)
 // ----------------------------------------------------
 
-// Swap between the four modal steps with a real transition instead of an
-// instant display:none/block swap. Re-triggers the CSS entrance animation
-// on the view being shown.
-function showRzpStep(viewName) {
-    const views = {
-        form: elements.rzpFormView,
-        processing: elements.rzpProcessingView,
-        otp: elements.rzpOtpView,
-        success: elements.rzpSuccessView
-    };
-    Object.entries(views).forEach(([name, el]) => {
-        if (name === viewName) {
-            el.style.display = "block";
-            el.classList.remove("rzp-view");
-            void el.offsetWidth; // force reflow so the animation replays
-            el.classList.add("rzp-view");
-        } else {
-            el.style.display = "none";
-        }
-    });
-}
-
-function initiatePurchase(courseId) {
+async function initiatePurchase(courseId) {
     if (!state.currentUser) {
         showToast("Please register or sign in to enroll in programs.", "info");
         openAuthModal();
@@ -1017,86 +991,6 @@ function initiatePurchase(courseId) {
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
 
-    state.purchasingCourse = course;
-    elements.rzpDueAmount.textContent = `₹${course.price.toLocaleString('en-IN')}.00`;
-    elements.rzpCourseTitle.textContent = course.title;
-    document.getElementById("rzp-qr-amount").textContent = `₹${course.price.toLocaleString('en-IN')}`;
-
-    // Reset to the payment form step
-    showRzpStep("form");
-    elements.rzpModal.classList.add("active-modal");
-
-    // Reset UPI tab to default (ID entry) state
-    document.querySelectorAll(".rzp-tab-btn").forEach(b => b.classList.remove("active"));
-    document.querySelectorAll(".rzp-tab-content").forEach(c => c.classList.remove("active"));
-    document.querySelector('.rzp-tab-btn[data-tab="upi-id-pay"]').classList.add("active");
-    document.getElementById("upi-id-pay").classList.add("active");
-
-    // Initialize inputs
-    elements.rzpUpiId.value = "";
-    elements.rzpOtpCodeInput.value = "";
-    elements.rzpPaymentActionBtn.disabled = false;
-    elements.rzpPaymentActionBtn.textContent = "Pay Securely with Razorpay";
-}
-
-function handleRazorpayFormSubmit() {
-    const tabActive = document.querySelector(".rzp-tab-btn.active").getAttribute("data-tab");
-
-    // QR mode has nothing to type — ID mode needs a UPI address
-    if (tabActive === "upi-id-pay" && !elements.rzpUpiId.value.trim()) {
-        showToast("Please enter a valid UPI ID (e.g. yourname@okhdfcbank).", "error");
-        return;
-    }
-
-    elements.rzpPaymentActionBtn.disabled = true;
-
-    // Step 1: processing/connecting transition
-    showRzpStep("processing");
-    elements.rzpProcessingTitle.textContent = tabActive === "upi-qr-pay"
-        ? "Waiting for QR scan confirmation..."
-        : "Connecting to your UPI app...";
-    elements.rzpProcessingSubtext.textContent = "Please don't close or refresh this window.";
-
-    // A believable beat before asking the backend to email the real OTP
-    setTimeout(() => {
-        fetch(`${API_BASE}/api/payments/send-otp`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: state.currentUser.email })
-        })
-            .then(res => res.json())
-            .then(() => {
-                elements.rzpOtpSubtext.textContent = `A verification code has been sent to ${state.currentUser.email}. Enter it below to finalize enrollment.`;
-                elements.rzpOtpCodeInput.value = "";
-                showRzpStep("otp");
-                elements.rzpPaymentActionBtn.disabled = false;
-                elements.rzpPaymentActionBtn.textContent = "Pay Securely with Razorpay";
-                showToast(`Verification code sent to ${state.currentUser.email}. Check your inbox.`, "info");
-            })
-            .catch(() => {
-                showRzpStep("form");
-                elements.rzpPaymentActionBtn.disabled = false;
-                elements.rzpPaymentActionBtn.textContent = "Pay Securely with Razorpay";
-                showToast("Could not send verification code. Please try again.", "error");
-            });
-    }, 1400);
-}
-
-async function submitPaymentOTP() {
-    const course = state.purchasingCourse;
-    if (!course) return;
-
-    const otpCode = elements.rzpOtpCodeInput.value.trim();
-    if (!otpCode) {
-        showToast("Please enter the verification code sent to your email.", "error");
-        return;
-    }
-
-    // Step 2: processing/authenticating transition
-    showRzpStep("processing");
-    elements.rzpProcessingTitle.textContent = "Authenticating OTP...";
-    elements.rzpProcessingSubtext.textContent = "Confirming your transaction with the bank.";
-
     try {
         const res = await fetch(`${API_BASE}/api/orders`, {
             method: "POST",
@@ -1104,12 +998,12 @@ async function submitPaymentOTP() {
                 "Content-Type": "application/json",
                 "x-user-id": state.currentUser.id
             },
-            body: JSON.stringify({ courseId: course.id, email: state.currentUser.email, otp: otpCode })
+            body: JSON.stringify({ courseId: course.id })
         });
         const data = await res.json();
 
         if (!res.ok) {
-            throw new Error(data.error || "Order could not be processed.");
+            throw new Error(data.error || "Enrollment could not be processed.");
         }
 
         // Reflect the enrollment on the logged-in session and refresh cached data
@@ -1117,62 +1011,11 @@ async function submitPaymentOTP() {
         await syncWithBackend();
         renderCourseCatalog();
 
-        // Step 3: success screen with a mini receipt, shown before closing
-        elements.rzpSuccessSubtext.textContent = `You're enrolled in "${course.title}".`;
-        elements.rzpSuccessOrderId.textContent = data.order.id;
-        elements.rzpSuccessCourse.textContent = course.title;
-        elements.rzpSuccessAmount.textContent = `₹${data.order.amountPaid.toLocaleString('en-IN')}`;
-        showRzpStep("success");
+        showToast(`You're enrolled in "${course.title}"! You can start studying now.`, "success");
     } catch (err) {
-        showRzpStep("otp");
-        showToast(err.message || "Payment could not be verified. Please try again.", "error");
+        showToast(err.message || "Enrollment failed. Please try again.", "error");
     }
 }
-
-// Continue button on the success screen closes the modal and heads to dashboard
-elements.rzpSuccessContinueBtn.addEventListener("click", () => {
-    elements.rzpModal.classList.remove("active-modal");
-    switchView("dashboard-view");
-});
-
-// Setup payment method tabs in simulator
-document.querySelectorAll(".rzp-tab-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-        document.querySelectorAll(".rzp-tab-btn").forEach(b => b.classList.remove("active"));
-        document.querySelectorAll(".rzp-tab-content").forEach(c => c.classList.remove("active"));
-
-        btn.classList.add("active");
-        const tabId = btn.getAttribute("data-tab");
-        document.getElementById(tabId).classList.add("active");
-    });
-});
-
-// Close Razorpay overlay when clicking outside
-elements.rzpModal.addEventListener("click", (e) => {
-    if (e.target === elements.rzpModal) {
-        elements.rzpModal.classList.remove("active-modal");
-        showToast("Transaction authentication cancelled.", "error");
-    }
-});
-
-// Resend OTP in gateway
-elements.rzpResendOtpBtn.addEventListener("click", () => {
-    elements.rzpOtpCodeInput.value = "";
-    fetch(`${API_BASE}/api/payments/send-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: state.currentUser.email })
-    })
-        .then(res => res.json())
-        .then(() => showToast(`New verification code sent to ${state.currentUser.email}.`, "info"))
-        .catch(() => showToast("Could not resend verification code.", "error"));
-});
-
-// Cancel OTP
-elements.rzpCancelOtpBtn.addEventListener("click", () => {
-    elements.rzpModal.classList.remove("active-modal");
-    showToast("Transaction aborted by student.", "error");
-});
 
 // ----------------------------------------------------
 // 9. STUDENT DASHBOARD RENDERING
@@ -1978,7 +1821,7 @@ function renderAdminOrders() {
             <td><code>${o.id}</code></td>
             <td>${o.userEmail}</td>
             <td>${o.courseTitle}</td>
-            <td>${o.paymentGateway} (Simulated)</td>
+            <td>${o.paymentGateway}</td>
             <td>${o.date}</td>
             <td style="font-weight: 700; color: var(--success);">₹${o.amountPaid}</td>
         `;
@@ -2798,8 +2641,7 @@ function setupEventListeners() {
     elements.backToDashboardBtn.addEventListener("click", () => switchView("dashboard-view"));
 
     // Razorpay Checkout Actions
-    elements.rzpPaymentActionBtn.addEventListener("click", handleRazorpayFormSubmit);
-    elements.rzpSubmitOtpBtn.addEventListener("click", submitPaymentOTP);
+    // Razorpay simulation removed — enrollment now happens directly via initiatePurchase()
 
     // Explore anchor scroll
     elements.exploreBtn.addEventListener("click", () => {

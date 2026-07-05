@@ -56,7 +56,7 @@
                 <div class="hero-badge"><i class="fa-solid fa-star"></i> Leading Educational Platform in India</div>
                 <h1>Source Career <span>Institute</span></h1>
                 <p class="hero-subtitle">Learn, Grow, Succeed</p>
-                <p class="hero-description">Access high-quality recorded lectures, curated PDF study notes, and Daily Practice Problems (DPPs). Complete standard transactions via our integrated Razorpay payment gateway simulator with full OTP verification security.</p>
+                <p class="hero-description">Access high-quality recorded lectures, curated PDF study notes, and Daily Practice Problems (DPPs). Enroll instantly and start learning right away.</p>
                 <button class="btn btn-primary" id="explore-btn">Explore Courses & Syllabus <i class="fa-solid fa-arrow-right"></i></button>
             </div>
 
@@ -382,7 +382,7 @@
                     <!-- Admin Pane 5: Order Logs -->
                     <div class="admin-section" id="admin-orders-pane">
                         <div class="admin-header-row">
-                            <h2>Razorpay Transaction Logs</h2>
+                            <h2>Enrollment Logs</h2>
                         </div>
                         <div class="admin-table-container glass-panel">
                             <table class="admin-table">
@@ -631,124 +631,6 @@
             
             <div style="margin-top: 20px; font-size: 13px; color: var(--text-muted);">
                 Didn't receive the email? <span id="register-otp-resend-btn" style="color: var(--primary-light); cursor: pointer; font-weight: 600; text-decoration: underline;">Resend OTP</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL: RAZORPAY SIMULATED CHECKOUT WITH OTP SECURE AUTHENTICATION -->
-    <div class="modal-overlay" id="rzp-modal">
-        <div class="razorpay-window">
-            
-            <!-- VIEW A: Payment Details Panel -->
-            <div id="rzp-form-view" class="rzp-view">
-                <div class="rzp-header">
-                    <div class="rzp-logo">
-                        <i class="fa-solid fa-compass" style="color: #2c93f7;"></i>
-                        Razorpay<span>.</span>
-                    </div>
-                    <div class="rzp-amount">
-                        <div class="lbl">Amount Due</div>
-                        <div class="val" id="rzp-due-amount">₹4,999.00</div>
-                    </div>
-                </div>
-                <div class="rzp-body">
-                    <div style="font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 12px;" id="rzp-course-title">Calculus & Algebra Bootcamp</div>
-                    
-                    <div class="rzp-tab-nav">
-                        <div class="rzp-tab-btn active" data-tab="upi-id-pay">Pay via UPI ID</div>
-                        <div class="rzp-tab-btn" data-tab="upi-qr-pay">Scan QR Code</div>
-                    </div>
-
-                    <!-- UPI ID tab -->
-                    <div class="rzp-tab-content active" id="upi-id-pay">
-                        <div class="form-group" style="margin-bottom: 12px;">
-                            <input type="text" id="rzp-upi-id" placeholder="Enter UPI ID (e.g. yourname@okhdfcbank)" style="font-size: 13px; padding: 10px; background: rgba(0,0,0,0.25);">
-                        </div>
-                        <div style="text-align: center; color: rgba(255,255,255,0.4); font-size: 11px;">
-                            <i class="fa-solid fa-mobile-screen-button" style="font-size: 28px; display: block; margin-bottom: 8px; color: #fff;"></i>
-                            You'll get a collect request on your UPI app to approve.
-                        </div>
-                    </div>
-
-                    <!-- UPI QR tab -->
-                    <div class="rzp-tab-content" id="upi-qr-pay">
-                        <div class="rzp-qr-box">
-                            <div class="rzp-qr-code">
-                                <i class="fa-solid fa-qrcode"></i>
-                            </div>
-                            <p>Scan this QR code with any UPI app (GPay, PhonePe, Paytm) to pay <strong id="rzp-qr-amount">₹0</strong></p>
-                        </div>
-                    </div>
-
-                    <button class="rzp-pay-btn" id="rzp-payment-action-btn">
-                        Pay Securely with Razorpay
-                    </button>
-
-                    <div class="rzp-security-note">
-                        <i class="fa-solid fa-shield-halved"></i>
-                        Secured by Razorpay. Sandbox Payment Mode.
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW B1: Processing / connecting transition (reused before OTP and after OTP) -->
-            <div id="rzp-processing-view" class="rzp-view" style="display: none;">
-                <div class="rzp-processing-box">
-                    <div class="rzp-spinner-ring"></div>
-                    <h3 id="rzp-processing-title">Connecting to bank...</h3>
-                    <p id="rzp-processing-subtext">Please don't close or refresh this window.</p>
-                </div>
-            </div>
-
-            <!-- VIEW B2: OTP Authentication Panel (Gated Payment Verification) -->
-            <div id="rzp-otp-view" class="rzp-view" style="display: none;">
-                <div class="rzp-header" style="background: #111520; border-bottom: 1px solid rgba(255,255,255,0.08);">
-                    <div style="font-size: 14px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
-                        <i class="fa-solid fa-shield-halved" style="color: var(--success);"></i>
-                        Source Carrier Secure Portal
-                    </div>
-                    <div style="font-size: 10px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px;">
-                        3D Secure 2.0
-                    </div>
-                </div>
-                <div class="rzp-body" style="padding: 24px;">
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <i class="fa-solid fa-lock" style="font-size: 32px; color: var(--primary-light); margin-bottom: 12px; display: block;"></i>
-                        <h3 style="font-size: 16px; margin-bottom: 6px; color: #fff;">Transaction Authentication</h3>
-                        <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;" id="rzp-otp-subtext">
-                            A verification code has been sent to your registered email. Enter it below to finalize enrollment.
-                        </p>
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="rzp-otp-code-input" style="font-size: 12px; color: #fff; text-align: left; display: block; margin-bottom: 6px;">One-Time Password (OTP)</label>
-                        <input type="text" id="rzp-otp-code-input" placeholder="Enter 6-digit OTP" style="font-size: 14px; text-align: center; letter-spacing: 4px; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color);">
-                    </div>
-
-                    <div style="display: flex; gap: 10px;">
-                        <button type="button" class="btn btn-secondary" id="rzp-cancel-otp-btn" style="flex: 1; font-size: 13px; padding: 10px;">Cancel</button>
-                        <button type="button" class="btn btn-primary" id="rzp-submit-otp-btn" style="flex: 2; font-size: 13px; padding: 10px;">Verify & Complete</button>
-                    </div>
-
-                    <div style="text-align: center; margin-top: 15px;">
-                        <span id="rzp-resend-otp-btn" style="font-size: 11px; color: var(--primary-light); cursor: pointer; text-decoration: underline;">Resend OTP</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW C: Success confirmation, shown before the modal closes -->
-            <div id="rzp-success-view" class="rzp-view" style="display: none;">
-                <div class="payment-success-box">
-                    <i class="fa-solid fa-circle-check"></i>
-                    <h2>Payment Successful</h2>
-                    <p id="rzp-success-subtext">You're enrolled in the course.</p>
-                    <div class="rzp-receipt-mini">
-                        <div class="rzp-receipt-row"><span>Order ID</span><strong id="rzp-success-order-id">—</strong></div>
-                        <div class="rzp-receipt-row"><span>Course</span><strong id="rzp-success-course">—</strong></div>
-                        <div class="rzp-receipt-row"><span>Amount Paid</span><strong id="rzp-success-amount">—</strong></div>
-                    </div>
-                    <button class="btn btn-primary" id="rzp-success-continue-btn" style="width: 100%; margin-top: 20px;">Go to Dashboard</button>
-                </div>
             </div>
         </div>
     </div>
