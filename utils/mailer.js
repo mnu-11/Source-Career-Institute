@@ -34,6 +34,31 @@ function getTransporter() {
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS
+        },
+        // Connection pooling: without this, nodemailer opens a brand new SMTP
+        // connection (full TCP + TLS handshake + auth) for every single email,
+        // even though we're reusing the same transporter object above. Pooling
+        // keeps a small set of connections open and reuses them, which is what
+        // actually makes repeated sends fast instead of each one paying the
+        // full handshake cost.
+        pool: true,
+        maxConnections: 3,
+        maxMessages: 100,
+        // Fail fast instead of hanging if Gmail is slow to respond, so a stuck
+        // connection doesn't make the OTP request appear to hang forever.
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 10000
+    });
+
+    // Verify the connection once at startup so misconfigured credentials show
+    // up immediately in your logs instead of only failing on the first user's
+    // OTP request.
+    transporter.verify((err) => {
+        if (err) {
+            console.error('Email transporter verification failed:', err && err.message ? err.message : err);
+        } else {
+            console.log('Email transporter ready (Gmail SMTP, pooled).');
         }
     });
 
@@ -46,22 +71,29 @@ async function sendOtpEmail(toEmail, otp) {
         throw new Error('Email transporter is not configured. Set EMAIL_USER and EMAIL_PASS in .env.');
     }
 
-    await t.sendMail({
-        from: `"Source Carrier Institute" <${process.env.EMAIL_USER}>`,
-        to: toEmail,
-        subject: 'Your verification code',
-        text: `Your verification code is ${otp}. It expires in 10 minutes. If you didn't request this, you can ignore this email.`,
-        html: `
-            <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
-                <h2 style="color: #1a1a1a;">Verification code</h2>
-                <p>Use the code below to continue. It expires in 10 minutes.</p>
-                <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px; background: #f2f2f2; padding: 16px 24px; border-radius: 8px; text-align: center; margin: 20px 0;">
-                    ${otp}
+    const start = Date.now();
+    try {
+        await t.sendMail({
+            from: `"Source Carrier Institute" <${process.env.EMAIL_USER}>`,
+            to: toEmail,
+            subject: 'Your verification code',
+            text: `Your verification code is ${otp}. It expires in 10 minutes. If you didn't request this, you can ignore this email.`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+                    <h2 style="color: #1a1a1a;">Verification code</h2>
+                    <p>Use the code below to continue. It expires in 10 minutes.</p>
+                    <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px; background: #f2f2f2; padding: 16px 24px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                        ${otp}
+                    </div>
+                    <p style="color: #666; font-size: 13px;">If you didn't request this, you can safely ignore this email.</p>
                 </div>
-                <p style="color: #666; font-size: 13px;">If you didn't request this, you can safely ignore this email.</p>
-            </div>
-        `
-    });
+            `
+        });
+        console.log(`OTP email sent to ${toEmail} in ${Date.now() - start}ms`);
+    } catch (err) {
+        console.error(`OTP email to ${toEmail} failed after ${Date.now() - start}ms:`, err && err.message ? err.message : err);
+        throw err;
+    }
 }
 
 module.exports = { sendOtpEmail };
